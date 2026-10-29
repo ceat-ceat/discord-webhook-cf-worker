@@ -16,8 +16,6 @@ export default {
 		const url = new URL(request.url);
 		const match = url.pathname.match(/^\/(\d+)\/(.+)$/);
 
-		console.log(url);
-
 		const errorText = `
 uh oh! you did not provide webhook information correctly!
 
