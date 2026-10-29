@@ -13,6 +13,25 @@
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response("Hello World!");
+		const url = new URL(request.url);
+		const match = /^\/api\/webhooks\/(\d+)\/(.+)$/.test(url.pathname);
+
+		if (!match) {
+			return new Response(JSON.stringify({ no: "die" }), {
+				status: 400,
+				headers: {
+					"content-type": "application/json"
+				}
+			})
+		}
+
+		const headers = new Headers(request.headers);
+		headers.set("host", "discord.com");
+
+		return fetch(`https://discord.com${url.pathname}`, {
+			method: request.method,
+			headers: headers,
+			body: request.body
+		})
 	},
 } satisfies ExportedHandler<Env>;
