@@ -14,21 +14,33 @@
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
-		const match = /^\/api\/webhooks\/(\d+)\/(.+)$/.test(url.pathname);
+		const match = url.pathname.match(/^\/(\d+)\/(.+)$/);
+
+		console.log(url);
+
+		const errorText = `
+uh oh! you did not provide webhook information correctly!
+
+please do it like this:
+
+https://discord.com/api/webhooks/[CHANNEL_ID]/[TOKEN] -> ${url.origin}/[CHANNEL_ID]/[TOKEN]
+`
 
 		if (!match) {
-			return new Response(JSON.stringify({ no: "die" }), {
+			return new Response(errorText, {
 				status: 400,
 				headers: {
-					"content-type": "application/json"
+					"content-type": "text/plain"
 				}
 			})
 		}
 
+		const [, channelId, token] = match;
+
 		const headers = new Headers(request.headers);
 		headers.set("host", "discord.com");
 
-		return fetch(`https://discord.com${url.pathname}`, {
+		return fetch(`https://discord.com/api/webhooks/${channelId}/${token}`, {
 			method: request.method,
 			headers: headers,
 			body: request.body
