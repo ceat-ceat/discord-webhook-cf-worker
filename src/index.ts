@@ -14,7 +14,7 @@
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
-		const match = url.pathname.match(/^\/(\d+)\/(.+)$/);
+		const match = url.pathname.match(/^\/(\d+)\/([^/]+)\/?$/);
 
 		const errorText = `
 uh oh! you did not provide webhook information correctly!
@@ -22,26 +22,41 @@ uh oh! you did not provide webhook information correctly!
 please do it like this:
 
 https://discord.com/api/webhooks/[CHANNEL_ID]/[TOKEN] -> ${url.origin}/[CHANNEL_ID]/[TOKEN]
-`
+`;
 
 		if (!match) {
 			return new Response(errorText, {
 				status: 400,
-				headers: {
-					"content-type": "text/plain"
-				}
-			})
+				headers: { "content-type": "text/plain" }
+			});
 		}
 
 		const [, channelId, token] = match;
 
-		const headers = new Headers(request.headers);
-		headers.set("host", "discord.com");
+		const discordUrl = `https://discord.com/api/webhooks/${channelId}/${token}`;
 
-		return fetch(`https://discord.com/api/webhooks/${channelId}/${token}`, {
+		const headers = new Headers(request.headers);
+		// host header will be this worker,
+		// so remove to make it the upstream host instead (discord)
+		headers.delete("host");
+
+		const options: RequestInit = {
 			method: request.method,
-			headers: headers,
-			body: request.body
-		})
+			headers
+		}
+
+		// GET and HEAD requests should not have a body
+		if (request.method !== "GET" && request.method !== "HEAD") {
+			options.body = request.body;
+		}
+
+		try {
+			return await fetch(discordUrl, options);
+		} catch (e) {
+			return new Response("unexpected failure", {
+				status: 502,
+				headers: { "content-type": "text/plain" }
+			});
+		}
 	},
 } satisfies ExportedHandler<Env>;
